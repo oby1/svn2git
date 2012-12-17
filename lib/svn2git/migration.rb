@@ -43,6 +43,7 @@ module Svn2Git
       options[:branches] = 'branches'
       options[:tags] = 'tags'
       options[:exclude] = []
+      options[:'exclude-branches'] = []
       options[:revision] = nil
       options[:username] = nil
 
@@ -117,6 +118,10 @@ module Svn2Git
           options[:exclude] << regex
         end
 
+        opts.on('--exclude-branches REGEX', 'Specify a Perl regular expression to filter branches when fetching; can be used multiple times') do |regex|
+          options[:'exclude-branches'] << regex
+        end
+
         opts.on('-v', '--verbose', 'Be verbose in logging -- useful for debugging issues') do
           options[:verbose] = true
         end
@@ -127,6 +132,11 @@ module Svn2Git
         # Try it and see!
         opts.on_tail('-h', '--help', 'Show this message') do
           puts opts
+          exit
+        end
+
+        opts.on_tail("--version", "Show version") do
+          puts "2.2.2.excludebranches"
           exit
         end
       end
@@ -146,6 +156,7 @@ module Svn2Git
       rootistrunk = @options[:rootistrunk]
       authors = @options[:authors]
       exclude = @options[:exclude]
+      exclude_branches = @options[:'exclude-branches']
       revision = @options[:revision]
       username = @options[:username]
 
@@ -196,6 +207,10 @@ module Svn2Git
           regex << "#{branches}[/][^/]+[/]" unless branches.nil?
         end
         regex = '^(?:' + regex.join('|') + ')(?:' + exclude.join('|') + ')'
+        cmd += "'--ignore-paths=#{regex}'"
+      end
+      unless exclude_branches.empty?
+        regex = "^#{branches}[/](?:"+exclude_branches.join('|')+')'
         cmd += "'--ignore-paths=#{regex}'"
       end
       run_command(cmd)
