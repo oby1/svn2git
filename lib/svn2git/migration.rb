@@ -209,10 +209,6 @@ module Svn2Git
         regex = '^(?:' + regex.join('|') + ')(?:' + exclude.join('|') + ')'
         cmd += "'--ignore-paths=#{regex}'"
       end
-      unless exclude_branches.empty?
-        regex = "^#{branches}[/](?:"+exclude_branches.join('|')+')'
-        cmd += "'--ignore-paths=#{regex}'"
-      end
       run_command(cmd)
 
       get_branches
@@ -223,6 +219,14 @@ module Svn2Git
       # '*' character used to indicate the currently selected branch.
       @local = run_command("git branch -l --no-color").split(/\n/).collect{ |b| b.gsub(/\*/,'').strip }
       @remote = run_command("git branch -r --no-color").split(/\n/).collect{ |b| b.gsub(/\*/,'').strip }
+
+      exclude_branches = @options[:'exclude-branches']
+      unless exclude_branches.empty?
+        included_branches = @remote.reject{|remote| remote.match("^svn/(?:#{exclude_branches.join('|')})")}
+        log("excluding branches: #{(@remote-included_branches).join(', ')}")
+        @remote = included_branches
+        log("including branches: #{@remote.join(', ')}")
+      end
 
       # Tags are remote branches that start with "tags/".
       @tags = @remote.find_all { |b| b.strip =~ %r{^svn\/tags\/} }
